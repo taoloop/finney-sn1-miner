@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "profile_id": "67415c58-0627-4a6f-980f-e276de83d40f",
+  "profile_digest": "9e66ab09b3776157fe12078e893fdbe5395026eae5719a6dd171f502b1b488d7",
+  "tracks": ["main"],
+  "settings": [
+    {
+      "name": "APEX_COMPETITION_ID",
+      "description": "Numeric Apex competition id to submit to, as listed by `apex competitions`. Needed only for packaging and the person's submit step.",
+      "type": "integer",
+      "required": false,
+      "minimum": 0
+    }
+  ],
+  "sources": [
+    {
+      "path": "tracks/main/vendor/competition",
+      "repository": "https://github.com/macrocosm-os/apex",
+      "commit": "da4a308ea7e097a1e357937e5a322a54bba9cc41",
+      "licence": "MIT"
+    },
+    {
+      "path": "tracks/main/requirements.txt",
+      "repository": "https://github.com/macrocosm-os/apex",
+      "commit": "da4a308ea7e097a1e357937e5a322a54bba9cc41",
+      "licence": "MIT"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "kind": "coding_submission",
+  "uses": [],
+  "build": "python3 -m pip install -r tracks/main/requirements.txt",
+  "check": "python3 tracks/main/miner.py check",
+  "run": "python3 tracks/main/miner.py run",
+  "evaluate": "python3 tracks/main/miner.py evaluate",
+  "direction": "maximize",
+  "candidate": ["solution.py"],
+  "delivery": [
+    {
+      "title": "Install the Apex CLI from the upstream repository",
+      "primitive": "person",
+      "command": "git clone https://github.com/macrocosm-os/apex.git && cd apex && ./install_cli.sh",
+      "note": "Installs uv and the `apex` command. Done once per machine, outside this repository."
+    },
+    {
+      "title": "Create a wallet and register its hotkey on netuid 1",
+      "primitive": "person",
+      "command": "btcli subnet register --wallet.name <wallet> --wallet.hotkey <hotkey> --netuid 1",
+      "note": "Spends TAO (registration cost shown before confirming). Keys and mnemonics stay with the person and never enter this repository."
+    },
+    {
+      "title": "Link the registered hotkey to the Apex CLI",
+      "primitive": "person",
+      "command": "apex link",
+      "note": "Writes .apex.config.json (hotkey file path) in the working directory; it is git-ignored and must not be committed."
+    },
+    {
+      "title": "Confirm the energy_arbitrage competition id, rules and submission fee",
+      "primitive": "person",
+      "command": "apex competitions",
+      "values": ["APEX_COMPETITION_ID"],
+      "note": "Authenticated with the hotkey. Also read https://docs.macrocosmos.ai/subnets/new-subnet-1-apex/subnet-1-base-miner-setup/current-competitions; check the competition still takes a Python policy(view, state) file."
+    },
+    {
+      "title": "Package the candidate after check and evaluate pass",
+      "primitive": "person",
+      "command": "python3 tracks/main/miner.py run",
+      "values": ["APEX_COMPETITION_ID"],
+      "note": "Copies solution.py to tracks/main/dist/ with its sha256 and prints the exact submit command. Signs and pays nothing."
+    },
+    {
+      "title": "Submit the packaged solution (signs with the hotkey, pays the on-chain fee)",
+      "primitive": "person",
+      "command": "apex submit tracks/main/dist/solution.py -c $APEX_COMPETITION_ID",
+      "values": ["APEX_COMPETITION_ID"],
+      "note": "Winner-takes-all: the fee is lost unless this beats the current leader. If payment succeeds but upload fails, reuse --payment-block-hash/--payment-extrinsic-index instead of paying again."
+    },
+    {
+      "title": "Track the submission and leaderboard",
+      "primitive": "person",
+      "command": "apex list -c $APEX_COMPETITION_ID -m && apex result <submission_id>",
+      "values": ["APEX_COMPETITION_ID"],
+      "note": "Compare the live score with the local evaluate score and record the gap; `apex list -c <id> -t` shows the leaders."
+    }
+  ],
+  "settings": [
+    {
+      "name": "EA_SEED",
+      "description": "Master seed for local evaluate (instance seeds derive from it as in upstream test_challenge.py). Live seeds are hidden.",
+      "type": "integer",
+      "required": false,
+      "default": 123
+    },
+    {
+      "name": "EA_NUM_INSTANCES",
+      "description": "Instances scored by local evaluate; scenarios cycle BASELINE, CONGESTED, MULTIDAY, DENSE, CAPSTONE.",
+      "type": "integer",
+      "required": false,
+      "default": 5,
+      "minimum": 1,
+      "maximum": 100
+    },
+    {
+      "name": "EA_SANDBOX",
+      "description": "Run the candidate in the upstream subprocess sandbox during evaluate (true matches the live evaluator).",
+      "type": "boolean",
+      "required": false,
+      "default": true
+    }
+  ]
+}
