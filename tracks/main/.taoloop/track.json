@@ -7,53 +7,100 @@
   "run": "python3 tracks/main/miner.py run",
   "evaluate": "python3 tracks/main/miner.py evaluate",
   "direction": "maximize",
-  "candidate": ["solution.py"],
+  "candidate": [
+    "solution.py"
+  ],
   "delivery": [
     {
-      "title": "Install the Apex CLI from the upstream repository",
-      "primitive": "person",
-      "command": "git clone https://github.com/macrocosm-os/apex.git && cd apex && ./install_cli.sh",
-      "note": "Installs uv and the `apex` command. Done once per machine, outside this repository."
+      "title": "Install the Apex CLI at the pinned upstream commit",
+      "primitive": "agent",
+      "command": "git clone https://github.com/macrocosm-os/apex.git apex && git -C apex checkout da4a308ea7e097a1e357937e5a322a54bba9cc41 && (cd apex && ./install_cli.sh) && apex --help",
+      "note": "install_cli.sh installs uv, runs `uv sync` against the upstream uv.lock (bittensor==10.4.0 etc.) and `uv tool install src/cli`. Do it outside this repository. If `apex` is not found, add ~/.local/bin to PATH.",
+      "evidence": [
+        "install_cli.sh",
+        "src/cli/pyproject.toml",
+        "uv.lock",
+        "AGENTS.md"
+      ]
     },
     {
-      "title": "Create a wallet and register its hotkey on netuid 1",
-      "primitive": "person",
-      "command": "btcli subnet register --wallet.name <wallet> --wallet.hotkey <hotkey> --netuid 1",
-      "note": "Spends TAO (registration cost shown before confirming). Keys and mnemonics stay with the person and never enter this repository."
+      "title": "Install the scorer dependencies pinned to the evaluator image",
+      "primitive": "agent",
+      "command": "python3 -m pip install -r tracks/main/requirements.txt",
+      "note": "numpy==2.4.6 and scipy==1.17.1, copied from the upstream energy_arbitrage Dockerfile requirements (python:3.12-slim).",
+      "evidence": [
+        "shared/competition/src/competition/energy_arbitrage/dockerfiles/requirements.txt",
+        "shared/competition/src/competition/energy_arbitrage/dockerfiles/Dockerfile"
+      ]
     },
     {
-      "title": "Link the registered hotkey to the Apex CLI",
-      "primitive": "person",
-      "command": "apex link",
-      "note": "Writes .apex.config.json (hotkey file path) in the working directory; it is git-ignored and must not be committed."
+      "title": "Link the miner's registered netuid-1 hotkey to the Apex CLI",
+      "primitive": "agent",
+      "command": "apex link -l <wallets dir> -w <wallet name> -k <hotkey name>",
+      "note": "Writes .apex.config.json ({\"hotkey_file_path\": ..., \"timeout\": 60.0}) in the working directory; it signs and pays nothing. The hotkey must already be registered on netuid 1, or the orchestrator answers 403. Never commit .apex.config.json.",
+      "evidence": [
+        "src/cli/src/cli/commands/link.py",
+        "src/cli/src/cli/utils/config.py",
+        "AGENTS.md"
+      ]
     },
     {
-      "title": "Confirm the energy_arbitrage competition id, rules and submission fee",
-      "primitive": "person",
-      "command": "apex competitions",
-      "values": ["APEX_COMPETITION_ID"],
-      "note": "Authenticated with the hotkey. Also read https://docs.macrocosmos.ai/subnets/new-subnet-1-apex/subnet-1-base-miner-setup/current-competitions; check the competition still takes a Python policy(view, state) file."
+      "title": "Resolve the energy_arbitrage competition id and fee",
+      "primitive": "agent",
+      "command": "apex competitions && apex competitions -c <id>",
+      "values": [
+        "APEX_COMPETITION_ID"
+      ],
+      "note": "Requests are signed with the linked hotkey (Epistula) and sent to apex.api.macrocosmos.ai. Confirm that the competition is active, still takes a Python policy(view, state) file and shows its submission fee. Then set APEX_COMPETITION_ID.",
+      "evidence": [
+        "src/cli/src/cli/commands/competitions.py",
+        "shared/common/src/common/settings.py",
+        "src/cli/src/cli/utils/client.py",
+        "shared/common/src/common/utils/epistula.py"
+      ]
     },
     {
-      "title": "Package the candidate after check and evaluate pass",
-      "primitive": "person",
-      "command": "python3 tracks/main/miner.py run",
-      "values": ["APEX_COMPETITION_ID"],
-      "note": "Copies solution.py to tracks/main/dist/ with its sha256 and prints the exact submit command. Signs and pays nothing."
+      "title": "Check, evaluate and package the candidate",
+      "primitive": "agent",
+      "command": "python3 tracks/main/miner.py check && python3 tracks/main/miner.py evaluate && python3 tracks/main/miner.py run",
+      "values": [
+        "APEX_COMPETITION_ID"
+      ],
+      "note": "run copies solution.py to tracks/main/dist/ with its sha256 and prints the exact submit command. Compare the local score with the leaderboard top (`apex list -c $APEX_COMPETITION_ID -t`) before asking for a submission.",
+      "evidence": [
+        "shared/competition/src/competition/energy_arbitrage/python/test_challenge.py"
+      ]
     },
     {
-      "title": "Submit the packaged solution (signs with the hotkey, pays the on-chain fee)",
+      "title": "Approve the submission fee and submit the packaged solution",
       "primitive": "person",
       "command": "apex submit tracks/main/dist/solution.py -c $APEX_COMPETITION_ID",
-      "values": ["APEX_COMPETITION_ID"],
-      "note": "Winner-takes-all: the fee is lost unless this beats the current leader. If payment succeeds but upload fails, reuse --payment-block-hash/--payment-extrinsic-index instead of paying again."
+      "values": [
+        "APEX_COMPETITION_ID"
+      ],
+      "needs": "payment",
+      "note": "The CLI transfers the per-competition fee in TAO from the coldkey to SUBMISSION_FEE_ADDRESS and asks for the coldkey password. It then uploads the file, signed with the hotkey. Rewards are winner-takes-all, so the fee is lost unless this beats the current leader. If payment succeeds but the upload fails, retry with --payment-block-hash/--payment-extrinsic-index instead of paying again.",
+      "evidence": [
+        "src/cli/src/cli/commands/submit.py",
+        "src/cli/src/cli/utils/payment.py",
+        "shared/common/src/common/settings.py",
+        "AGENTS.md",
+        "SOLVERS.md"
+      ]
     },
     {
-      "title": "Track the submission and leaderboard",
-      "primitive": "person",
-      "command": "apex list -c $APEX_COMPETITION_ID -m && apex result <submission_id>",
-      "values": ["APEX_COMPETITION_ID"],
-      "note": "Compare the live score with the local evaluate score and record the gap; `apex list -c <id> -t` shows the leaders."
+      "title": "Track the submission score against the leaderboard",
+      "primitive": "agent",
+      "command": "apex list -c $APEX_COMPETITION_ID -m && apex list -c $APEX_COMPETITION_ID -t && apex result <submission_id>",
+      "values": [
+        "APEX_COMPETITION_ID"
+      ],
+      "note": "Read-only. Record the gap between the live score and the local evaluate score. Weights follow the orchestrator's global scores (validators set weights every 1260 s).",
+      "evidence": [
+        "src/cli/src/cli/commands/list_submissions.py",
+        "src/cli/src/cli/commands/result.py",
+        "src/validator/src/validator/validator.py"
+      ]
     }
   ],
   "settings": [
@@ -62,7 +109,11 @@
       "description": "Master seed for local evaluate (instance seeds derive from it as in upstream test_challenge.py). Live seeds are hidden.",
       "type": "integer",
       "required": false,
-      "default": 123
+      "default": 123,
+      "provider": "person",
+      "evidence": [
+        "shared/competition/src/competition/energy_arbitrage/python/test_challenge.py"
+      ]
     },
     {
       "name": "EA_NUM_INSTANCES",
@@ -71,14 +122,25 @@
       "required": false,
       "default": 5,
       "minimum": 1,
-      "maximum": 100
+      "maximum": 100,
+      "provider": "person",
+      "evidence": [
+        "shared/competition/src/competition/energy_arbitrage/python/test_challenge.py",
+        "shared/competition/src/competition/energy_arbitrage/python/scenarios.py"
+      ]
     },
     {
       "name": "EA_SANDBOX",
       "description": "Run the candidate in the upstream subprocess sandbox during evaluate (true matches the live evaluator).",
       "type": "boolean",
       "required": false,
-      "default": true
+      "default": true,
+      "provider": "person",
+      "evidence": [
+        "shared/competition/src/competition/energy_arbitrage/python/sandbox.py",
+        "shared/competition/src/competition/energy_arbitrage/python/sandbox_worker.py"
+      ]
     }
-  ]
+  ],
+  "services": []
 }

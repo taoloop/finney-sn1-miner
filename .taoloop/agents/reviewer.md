@@ -37,5 +37,5 @@ description: Reviews each energy_arbitrage change for rule compliance, correctne
   that shows the problem.
 
 **Exit criteria**
-- Approve only when every checklist item holds. Delivery (`apex submit`, fees, registration)
-  stays with a person; the reviewer never performs it.
+- Approve only when every checklist item holds. The reviewer never performs delivery:
+  `apex submit` (fee payment) is the person's, and the other steps are TaoLoop's.

@@ -6,7 +6,7 @@ changing anything.
 ## What a miner is here
 
 Apex (netuid 1, built by Macrocosmos) runs **coding competitions**. A miner does not serve
-traffic. It writes a solution file, and a person submits it with the Apex CLI
+traffic. It writes a solution file, and the person approves its submission with the Apex CLI
 (`apex submit <file> -c <competition_id>`). The upload is signed with the miner hotkey
 (Epistula) and needs an on-chain fee. The Macrocosmos orchestrator
 (`apex.api.macrocosmos.ai`) scores each submission in an isolated sandbox. Validators fetch
@@ -88,22 +88,27 @@ decision action count and the shock quadrature. Ideas worth trying:
 
 Two instance types already hit the +10 cap, so gains now come from BASELINE and CONGESTED.
 
-## Delivery: a person's steps only
+## Delivery
 
-Agents must not run any of these: they sign, spend or publish. They are listed in
-`tracks/main/.taoloop/track.json` and run as follows:
+The steps are listed in `tracks/main/.taoloop/track.json`. TaoLoop runs them, not an
+improvement round. Hotkey registration on netuid 1 is TaoLoop's job and not a step.
 
-1. Install the Apex CLI from the upstream repo.
-2. Register a hotkey on netuid 1 (costs TAO).
-3. Run `apex link`.
-4. Run `apex competitions` to confirm the energy_arbitrage id, the fee and that the competition
-   still takes a Python policy file, then set `APEX_COMPETITION_ID`.
-5. Run `python3 tracks/main/miner.py run`.
-6. Run `apex submit tracks/main/dist/solution.py -c $APEX_COMPETITION_ID`, which pays the fee.
-7. Watch the result with `apex list -c <id> -m` and `apex result <id>`.
+1. *agent*: install the Apex CLI at upstream commit `da4a308` (`./install_cli.sh`).
+2. *agent*: `python3 -m pip install -r tracks/main/requirements.txt`.
+3. *agent*: `apex link -l <wallets dir> -w <wallet> -k <hotkey>`. This writes
+   `.apex.config.json`, which is never committed.
+4. *agent*: `apex competitions`. Take the energy_arbitrage id and fee, confirm it still takes a
+   Python `policy(view, state)` file, and set `APEX_COMPETITION_ID`.
+5. *agent*: `check`, `evaluate`, then `run`, which packages `tracks/main/dist/solution.py`.
+6. **person** (needs payment): `apex submit tracks/main/dist/solution.py -c $APEX_COMPETITION_ID`.
+   The CLI pays the per-competition TAO fee from the coldkey, which asks for the coldkey
+   password, and uploads the file signed with the hotkey.
+7. *agent*: read-only tracking with `apex list -c <id> -m`, `apex list -c <id> -t` and
+   `apex result <id>`.
 
-Each submission costs a fee and is winner-takes-all. Submit only a candidate that clearly beats
-the current leader (`apex list -c <id> -t`).
+A coding agent working on the candidate never runs `apex submit` or any payment. Each submission
+costs a fee and rewards are winner-takes-all, so propose a submission only for a candidate that
+clearly beats the current leader (`apex list -c <id> -t`).
 
 ## Off limits
 

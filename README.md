@@ -21,18 +21,20 @@ python3 tracks/main/miner.py run         # packages the file and prints the subm
 With seed 123 and 5 instances, the shipped policy scores about 6.65 (pure-Python fallback, no
 numpy). Upstream's example `energy_solver_2` scores about 1.21 on the same instances.
 
-## Submitting (you, not an agent)
+## Submitting
 
-Submitting costs TAO and signs with your hotkey:
+TaoLoop handles setup: it installs the Apex CLI, links the registered hotkey with
+`apex link`, finds the energy_arbitrage competition id and packages the candidate. The one step
+that is yours is approving the fee:
 
-1. Install the Apex CLI (`./install_cli.sh` in a clone of https://github.com/macrocosm-os/apex).
-2. Register a hotkey on netuid 1.
-3. Run `apex link`.
-4. Run `apex competitions` to find the energy_arbitrage id and its fee.
-5. Run `apex submit tracks/main/dist/solution.py -c <id>`.
+```bash
+apex submit tracks/main/dist/solution.py -c <competition id>
+```
 
-The full list is in `AGENTS.md` and `tracks/main/.taoloop/track.json`. Rewards are
-winner-takes-all, so a submission that doesn't top the leaderboard loses its fee.
+It pays the competition's submission fee in TAO from your coldkey, asking for the coldkey
+password, and uploads the file signed with the hotkey. Rewards are winner-takes-all, so a
+submission that doesn't top the leaderboard loses its fee. The full list of steps is in
+`AGENTS.md` and `tracks/main/.taoloop/track.json`.
 
 ## Layout
 
