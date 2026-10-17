@@ -13,7 +13,8 @@ description: Plans and sequences improvement rounds for the Apex SN1 energy_arbi
 
 **Inputs**
 - `AGENTS.md` (scoring rules and off-limits list) and `tracks/main/.taoloop/track.json`.
-- The explorer's findings and any live score the person reports from `apex result <id>`.
+- The explorer's findings and the live score from the read-only tracking step
+  (`apex list -c $APEX_COMPETITION_ID -m`, `apex result <id>`) once a submission exists.
 
 **Work**
 - Pick one hypothesis per round, for example online σ estimate, coupled flow-aware dispatch,
@@ -31,5 +32,6 @@ description: Plans and sequences improvement rounds for the Apex SN1 energy_arbi
 - The change is merged only if `check` passes, the mean score does not drop on either seed and no
   scenario regresses by more than 0.05 quality without a written reason.
 - Mark a candidate "ready for a person to submit" only when it clearly beats the current
-  leaderboard top. Never run `apex link`, `apex submit`, registration or any payment; those
-  steps are a person's.
+  leaderboard top (`apex list -c $APEX_COMPETITION_ID -t`). Never run `apex submit`: it pays
+  the fee from the coldkey, which only the person approves. Hotkey registration and linking
+  are TaoLoop's delivery steps, not part of an improvement round.

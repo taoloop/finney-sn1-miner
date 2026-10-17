@@ -2,14 +2,24 @@
   "schema_version": 1,
   "profile_id": "67415c58-0627-4a6f-980f-e276de83d40f",
   "profile_digest": "9e66ab09b3776157fe12078e893fdbe5395026eae5719a6dd171f502b1b488d7",
-  "tracks": ["main"],
+  "tracks": [
+    "main"
+  ],
   "settings": [
     {
       "name": "APEX_COMPETITION_ID",
-      "description": "Numeric Apex competition id to submit to, as listed by `apex competitions`. Needed only for packaging and the person's submit step.",
+      "description": "Numeric Apex competition id of the active energy_arbitrage competition. Used by `run` (printed submit command) and by the submit and tracking steps.",
       "type": "integer",
       "required": false,
-      "minimum": 0
+      "minimum": 0,
+      "provider": "taoloop",
+      "how": "After `apex link`, run `apex competitions` with the linked hotkey and take the id of the active energy_arbitrage competition.",
+      "evidence": [
+        "AGENTS.md",
+        "SOLVERS.md",
+        "src/cli/src/cli/commands/competitions.py",
+        "src/cli/src/cli/commands/submit.py"
+      ]
     }
   ],
   "sources": [
